@@ -5,6 +5,7 @@ import BANK from './bank/index.js';
 import { rng, tx, esc } from './util.js';
 import { check } from './check.js';
 import { analyze } from './feedback.js';
+import { logAnswer, logActivity } from './learnlog.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const app = $('#app');
@@ -43,7 +44,11 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 function stars(id) { const s = stats[id]; if (!s) return 0; const [n, ok] = s; return ok >= 20 && ok / n >= 0.8 ? 3 : ok >= 8 ? 2 : ok >= 3 ? 1 : 0; }
 const starHTML = (k) => `<span class="stars">${'★'.repeat(k)}<i>${'★'.repeat(3 - k)}</i></span>`;
-function record(id, ok) { const s = (stats[id] ||= [0, 0]); s[0]++; if (ok) s[1]++; store.set('stats', stats); }
+function record(id, ok) {
+  const s = (stats[id] ||= [0, 0]); s[0]++; if (ok) s[1]++; store.set('stats', stats);
+  const tp = byId(id); if (tp) logAnswer('writingdojo', LOG_META, { id, name: tp.name, grade: tp.grade }, ok);
+}
+const LOG_META = { name: { zh: '寫作練功房', en: 'Writing Dojo' }, url: '/writing-dojo/' };
 const draftOf = (id) => store.get('draft:' + id, null);
 
 // ---------- header ----------
@@ -291,6 +296,7 @@ function studio(id) {
       $('#dl').onclick = download;
     } else if (d.step === 2) {
       const r = analyze(d.draft, p, p.grade);
+      logActivity('writingdojo', LOG_META, { id: p.id, name: p.title, grade: p.grade });
       const icon = { fix: '🔴', tip: '🟡', good: '🟢' };
       el.innerHTML = `<div class="statrow"><span>${L('字數', 'Words')} <b>${r.stats.words}</b></span><span>${L('句子', 'Sentences')} <b>${r.stats.sentences}</b></span><span>${L('段落', 'Paragraphs')} <b>${r.stats.paragraphs}</b></span><span>${L('平均句長', 'Avg. sentence')} <b>${r.stats.avg}</b></span></div>
         <h3>🤖 ${L('電腦幫你看', 'Automatic feedback')}</h3><ul class="notes">${r.notes.map((n) => `<li class="${n.kind}">${icon[n.kind]} ${X(n.msg)}</li>`).join('')}</ul>
